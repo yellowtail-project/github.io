@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>におい評価 v2：ランダム順序・自動DL・手動で次へ</title>
+  <style>
+    :root { --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --ok:#10b981; --warn:#f59e0b; --err:#ef4444; --ink:#e5e7eb; }
+    html,body{height:100%;background:var(--bg);color:var(--ink);font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", Meiryo, "Apple Color Emoji", "Segoe UI Emoji";}
+    .wrap{max-width:900px;margin:0 auto;padding:16px;}
+    h1{font-weight:700;font-size:clamp(20px,4vw,28px);margin:8px 0 12px}
+    .card{background:var(--panel);border-radius:18px;padding:16px;box-shadow: 0 6px 30px rgba(0,0,0,.2);}
+    .grid{display:grid;gap:12px}
+    @media(min-width:780px){.grid{grid-template-columns: 1.1fr .9fr}}
+    label{font-size:14px;color:var(--muted)}
+    input,select,button,textarea{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #1f2937;background:#0b1220;color:var(--ink);font-size:16px}
+    input::placeholder{color:#64748b}
+    button{cursor:pointer;background:#1f2937;border-color:#334155;transition: .15s}
+    button.primary{background:linear-gradient(180deg,#22c55e,#16a34a);border:0;color:white;font-weight:700}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .row{display:flex;gap:8px;align-items:center}
+    .row>*{flex:1}
+    .muted{color:var(--muted)}
+    .ok{color:var(--ok)}
+    .warn{color:var(--warn)}
+    .err{color:var(--err)}
+    video{width:100%;background:black;border-radius:14px}
+    .progress{height:10px;background:#0b1220;border-radius:999px;overflow:hidden}
+    .bar{height:100%;background:linear-gradient(90deg,#34d399,#22d3ee);width:0%}
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{padding:6px 10px;border-radius:999px;background:#0b1220;border:1px solid #334155;color:#cbd5e1;font-size:12px}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{border-bottom:1px solid #223049;padding:8px 6px;text-align:left;font-size:14px}
+    .kbd{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;background:#0b1220;border:1px solid #334155;border-radius:8px;padding:.2em .45em}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>におい評価 v2：20秒×10本（ランダム順序・自動DL・手動で次へ）</h1>
+    <p class="muted">要件対応版：<b>録画後に自動ダウンロード</b>、<b>開始製品はランダム（全体順序をシャッフル）</b>、<b>各録画後は「次を撮影」を押すまで待機</b>。ファイル名は <b>被験者ID（Prefix）＋連番（01〜10）</b> です。サーバー送信機能は含みません。</p>
+
+    <div class="grid">
+      <div class="card">
+        <div class="grid" style="grid-template-columns: 1fr 1fr;">
+          <div>
+            <label>被験者ID（ファイル名Prefixとして使用）</label>
+            <input id="participantId" placeholder="例: P001" />
+          </div>
+          <div>
+            <label>撮影カメラ</label>
+            <select id="cameraFacing">
+              <option value="user">インカメラ（自撮り）</option>
+              <option value="environment">アウトカメラ（背面）</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid" style="margin-top:12px;grid-template-columns: 1fr 1fr;">
+          <div>
+            <label>カウントダウン（秒）</label>
+            <input id="countdownSec" type="number" min="0" value="10" />
+          </div>
+          <div>
+            <label>録画時間（秒）<span class="muted"> 固定要件: 20秒</span></label>
+            <input id="recordSec" type="number" min="1" value="20" disabled />
+          </div>
+        </div>
+
+        <div class="grid" style="margin-top:12px">
+          <div>
+            <label>製品名（10種類、必要なら編集）</label>
+            <textarea id="productList" rows="4">製品1
+製品2
+製品3
+製品4
+製品5
+製品6
+製品7
+製品8
+製品9
+製品10</textarea>
+            <div class="muted" style="margin-top:4px">1行につき1製品。ちょうど10行にしてください（ファイル名には使いません）。</div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px">
+          <button id="btnSetup" class="primary">① カメラを準備（権限付与）</button>
+          <button id="btnStart" disabled>② 撮影セッション開始</button>
+          <button id="btnNext" disabled>次を撮影</button>
+          <button id="btnDiag">診断</button>
+        </div>
+        <div class="muted" style="margin-top:6px">※ iPhone / Android どちらも対応。iOSでは<b>ユーザー操作から</b>カメラ開始が必要なため、必ず「カメラを準備」→「撮影セッション開始」の順にタップしてください。</div>
+      </div>
+
+      <div class="card">
+        <video id="preview" playsinline muted></video>
+        <div class="row" style="margin-top:8px">
+          <div class="progress" style="flex:3"><div class="bar" id="progressBar"></div></div>
+          <div style="flex:1;text-align:right"><span id="phaseLabel">準備待ち</span> <span class="muted" id="timeLeft"></span></div>
+        </div>
+        <div class="chips" style="margin-top:8px" id="chips"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3 style="margin:0 0 8px">収録クリップ（自動DL＋再DL可）</h3>
+      <table class="table" id="clipsTable">
+        <thead>
+          <tr><th>#</th><th>製品名</th><th>長さ</th><th>ファイル</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="muted" style="margin-top:6px">各クリップは録画完了と同時に自動ダウンロードされ、ここから再ダウンロードもできます。</div>
+    </div>
+
+  </div>
+
+  <script>
+    // ======== ユーティリティ ========
+    const el = (id) => document.getElementById(id);
+    const preview = el('preview');
+    const btnSetup = el('btnSetup');
+    const btnStart = el('btnStart');
+    const btnNext  = el('btnNext');
+    const btnDiag  = el('btnDiag');
+    const phaseLabel = el('phaseLabel');
+    const timeLeft = el('timeLeft');
+    const progressBar = el('progressBar');
+    const clipsTableBody = document.querySelector('#clipsTable tbody');
+    const chips = el('chips');
+
+    let stream = null;
+    let recorder = null;
+    let chunks = [];
+    let supportMime = null;
+
+    let products = [];
+    let order = [];
+    let currentIndex = -1; // -1: not started
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    function pickSupportedMime(){
+      const cands = [
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8',
+        'video/webm;codecs=h264',
+        'video/webm',
+        'video/mp4;codecs=h264',
+        'video/mp4'
+      ];
+      for(const m of cands){
+        if(window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m;
+      }
+      return '';
+    }
+
+    function shuffle(arr){
+      const a = arr.slice();
+      for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; }
+      return a;
+    }
+
+    function renderChips(){
+      chips.innerHTML = '';
+      const list = order.length ? order.map(i=>products[i]) : products;
+      list.forEach((name, i)=>{
+        const span = document.createElement('span');
+        span.className = 'chip';
+        const active = (i===currentIndex);
+        span.textContent = `${i+1}. ${name}` + (active ? '（撮影中）' : '');
+        chips.appendChild(span);
+      });
+    }
+
+    function toggleStartButton(){
+      const idOk = !!el('participantId').value.trim();
+      const streamOk = !!stream;
+      const listOk = (()=>{
+        const lines = el('productList').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+        return lines.length === 10;
+      })();
+      btnStart.disabled = !(idOk && streamOk && listOk);
+    }
+
+    async function setupCamera(){
+      try {
+        if (!window.isSecureContext) {
+          console.warn('Not a secure context (https). getUserMedia may fail.');
+        }
+        const facing = el('cameraFacing').value;
+        let firstError = null;
+        try {
+          // 第1試行：希望のカメラ指定
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: facing }, width:{ideal:1280}, height:{ideal:720} },
+            audio: true
+          });
+        } catch (e1) {
+          firstError = e1;
+          console.warn('getUserMedia first attempt failed:', e1 && e1.name, e1 && e1.message);
+          // 第2試行：フォールバック（制約を緩める）
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        }
+        preview.srcObject = stream;
+        await preview.play().catch(()=>{});
+        supportMime = pickSupportedMime();
+        btnStart.disabled = false;
+        phaseLabel.textContent = '準備OK';
+      } catch (err) {
+        console.error('getUserMedia error:', err && err.name, err && err.message);
+        phaseLabel.textContent = 'カメラ開始に失敗';
+        const secureHint = window.isSecureContext ? '' : '\n・このページを https で開いてください（http/fileでは不可）';
+        let hint = '・ブラウザの権限設定でカメラ/マイクを許可してください。\n・別アプリがカメラを使用中でないか確認してください。' + secureHint;
+        switch (err && err.name) {
+          case 'NotAllowedError':
+            hint = '・権限が拒否されています。Chromeの「サイトの設定」でこのサイトのカメラ/マイクを許可してください。' + secureHint; break;
+          case 'NotFoundError':
+            hint = '・カメラ/マイクが見つかりません。別アプリ使用中の可能性があります。'; break;
+          case 'NotReadableError':
+            hint = '・デバイスが占有中です。他のアプリを終了してから再試行してください。'; break;
+          case 'OverconstrainedError':
+            hint = '・指定のカメラ条件に合うデバイスが見つかりません。イン/アウト切替を変更して再試行してください。'; break;
+          case 'SecurityError':
+            hint = (window.isSecureContext ? '・端末のポリシー/MDMで制限されている可能性があります。' : '・https で開いてください。'); break;
+        }
+        alert('カメラ/マイクを開始できませんでした。\n理由: ' + (err && err.name ? err.name : '不明') + '\n\n' + hint);
+      } finally {
+        toggleStartButton();
+      }
+    }
+
+    function parseProducts(){
+      const lines = el('productList').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+      if(lines.length !== 10){
+        alert(`製品名は10行で入力してください（現在: ${lines.length} 行）`);
+        return null;
+      }
+      return lines;
+    }
+
+    function updateProgress(p){
+      progressBar.style.width = `${Math.max(0, Math.min(100, p*100))}%`;
+    }
+
+    function addClipRow({blob, productName, durationMs, mimeType}){
+      const tr = document.createElement('tr');
+      const url = URL.createObjectURL(blob);
+      const id = el('participantId').value.trim();
+      const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+      const seq = String(clipsTableBody.children.length + 1).padStart(2,'0');
+      const filename = `${id}${seq}.${ext}`.replace(/\s+/g,'_');
+
+      tr.innerHTML = `
+        <td>${parseInt(seq,10)}</td>
+        <td>${productName}</td>
+        <td>${(durationMs/1000).toFixed(1)} s</td>
+        <td><a download="${filename}" href="${url}">ダウンロード</a></td>
+      `;
+      clipsTableBody.appendChild(tr);
+    }
+
+    async function recordOne(productName){
+      const countdownSec = Math.max(0, parseInt(el('countdownSec').value || '10', 10));
+      const recordSec = 20; // 固定
+
+      // カウントダウン
+      phaseLabel.textContent = `カウントダウン (${productName})`;
+      for(let t=countdownSec; t>0; t--){
+        timeLeft.textContent = `${t}s`; updateProgress((countdownSec - t)/countdownSec);
+        await sleep(1000);
+      }
+      timeLeft.textContent = '0s'; updateProgress(1);
+
+      // 録画
+      phaseLabel.textContent = '録画中';
+      updateProgress(0);
+      chunks = [];
+      const mime = supportMime || undefined;
+      try{
+        recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      }catch(e){
+        console.error(e);
+        alert('このブラウザは動画の録画に対応していない可能性があります。最新のSafari/Chrome等をご利用ください。');
+        return;
+      }
+      const startAt = Date.now();
+      let stopped = false;
+      recorder.ondataavailable = (ev)=>{ if(ev.data && ev.data.size>0) chunks.push(ev.data); };
+      recorder.onstop = ()=>{ stopped = true; };
+      recorder.start();
+
+      const targetMs = recordSec*1000;
+      const tickInt = setInterval(()=>{
+        const elapsed = Date.now() - startAt;
+        const remain = Math.max(0, targetMs - elapsed);
+        timeLeft.textContent = `${Math.ceil(remain/1000)}s`;
+        updateProgress(elapsed/targetMs);
+      }, 200);
+      await sleep(targetMs);
+      try{ recorder.stop(); }catch(_){}
+      for(let k=0;k<10 && !stopped;k++) await sleep(100);
+      clearInterval(tickInt);
+
+      const blob = new Blob(chunks, {type: recorder.mimeType || mime || 'video/webm'});
+      const durationMs = Date.now() - startAt;
+
+      // 自動ダウンロード（被験者ID＋連番）
+      const idForName = el('participantId').value.trim();
+      const extForName = (recorder.mimeType || mime || 'video/webm').includes('mp4') ? 'mp4' : 'webm';
+      const seqForName = String(clipsTableBody.children.length + 1).padStart(2,'0');
+      const autoName = `${idForName}${seqForName}.${extForName}`.replace(/\s+/g,'_');
+      const tmpUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = tmpUrl; a.download = autoName; document.body.appendChild(a); a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(tmpUrl); a.remove(); }, 1500);
+
+      // 一覧に追加（再ダウンロード可）
+      addClipRow({blob, productName, durationMs, mimeType: blob.type});
+
+      phaseLabel.textContent = '待機中（次を撮影を押してください）';
+      timeLeft.textContent = '';
+      updateProgress(0);
+    }
+
+    async function runSession(){
+      const id = el('participantId').value.trim();
+      products = parseProducts();
+      if(!products) return;
+      if(!id){ alert('最初に被験者ID（ファイル名の接頭辞）を入力してください。'); return; }
+      if(!stream){ alert('先に「カメラを準備」を押してください。'); return; }
+
+      btnStart.disabled = true;
+      el('productList').disabled = true;
+      el('participantId').disabled = true;
+      el('cameraFacing').disabled = true;
+      btnSetup.disabled = true;
+
+      // ランダム順序（開始位置もランダム）
+      order = shuffle([...Array(products.length).keys()]);
+      currentIndex = -1; // まだ開始していない
+      renderChips();
+
+      phaseLabel.textContent = '待機中（次を撮影を押してください）';
+      btnNext.disabled = false;
+    }
+
+    // ======== 簡易診断 ========
+    async function diagnose(){
+      try{
+        const secure = window.isSecureContext;
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+          alert('navigator.mediaDevices.enumerateDevices() が利用できません。このブラウザではカメラ診断が制限されています。');
+          return;
+        }
+        const list = await navigator.mediaDevices.enumerateDevices();
+        const summary = list.map(d => `${d.kind} : ${d.label || '(未許可)'} : ${d.deviceId ? d.deviceId.slice(0,6)+'…' : ''}`).join('\n');
+        alert('SecureContext: ' + secure + '\n' + 'デバイス一覧:\n' + summary + '\n\n※ (未許可) の場合、サイトのカメラ/マイク許可が必要です。');
+      }catch(e){
+        alert('診断に失敗しました: ' + (e && e.message ? e.message : e));
+      }
+    }
+
+    // ======== イベント配線 ========
+    btnSetup.addEventListener('click', setupCamera);
+    btnStart.addEventListener('click', runSession);
+    btnDiag.addEventListener('click', diagnose);
+    el('participantId').addEventListener('input', toggleStartButton);
+    el('productList').addEventListener('input', toggleStartButton);
+
+    btnNext.addEventListener('click', async ()=>{
+      if(order.length === 0){ return; }
+      const nextIdx = currentIndex + 1;
+      if(nextIdx >= 10){ // 10本撮り切り
+        alert('すべての録画が完了しています。');
+        return;
+      }
+      btnNext.disabled = true; // 二重押し防止
+      currentIndex = nextIdx;
+      renderChips();
+      const productName = products[ order[currentIndex] ];
+      await recordOne(productName);
+      if(currentIndex >= 9){ // 10本完了
+        phaseLabel.textContent = '完了（全10本）';
+        alert('10本の録画が完了しました。クリップ一覧から保存内容をご確認ください。');
+        btnNext.disabled = true;
+        // 再実施を許可
+        btnStart.disabled = false;
+        el('productList').disabled = false;
+        el('participantId').disabled = false;
+        el('cameraFacing').disabled = false;
+        btnSetup.disabled = false;
+      }else{
+        btnNext.disabled = false;
+      }
+    });
+
+    document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && preview.srcObject) preview.play().catch(()=>{}); });
+  </script>
+</body>
+</html>
