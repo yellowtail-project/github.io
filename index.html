@@ -2,29 +2,27 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-  <title>カメラ起動 v2：ランダム順序・自動DL・手動で次へ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <title>映像評価 v2：ランダム順序・自動DL・手動／録画中は画像表示（全画面対応・ミラー切替・縦レイアウト）</title>
   <style>
     :root { --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --ok:#10b981; --warn:#f59e0b; --err:#ef4444; --ink:#e5e7eb; }
-    html,body{height:100%;background:var(--bg);color:var(--ink);font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", Meiryo, "Apple Color Emoji", "Segoe UI Emoji";}
+    html,body{height:100%;background:var(--bg);color:var(--ink);font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", Meiryo, "Apple Color Emoji", "Segoe UI Emoji"; margin:0; }
     .wrap{max-width:900px;margin:0 auto;padding:16px;}
     h1{font-weight:700;font-size:clamp(20px,4vw,28px);margin:8px 0 12px}
     .card{background:var(--panel);border-radius:18px;padding:16px;box-shadow: 0 6px 30px rgba(0,0,0,.2);}
-    .grid{display:grid;gap:12px}
-    @media(min-width:780px){.grid{grid-template-columns: 1.1fr .9fr}}
+    .grid{display:grid;gap:12px;grid-template-columns:1fr !important;}
     label{font-size:14px;color:var(--muted)}
     input,select,button,textarea{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #1f2937;background:#0b1220;color:var(--ink);font-size:16px}
     input::placeholder{color:#64748b}
     button{cursor:pointer;background:#1f2937;border-color:#334155;transition: .15s}
     button.primary{background:linear-gradient(180deg,#22c55e,#16a34a);border:0;color:white;font-weight:700}
     button:disabled{opacity:.5;cursor:not-allowed}
-    .row{display:flex;gap:8px;align-items:center}
-    .row>*{flex:1}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .muted{color:var(--muted)}
     .ok{color:var(--ok)}
     .warn{color:var(--warn)}
     .err{color:var(--err)}
-    video{width:100%;background:black;border-radius:14px}
+    video{width:100%;background:black;border-radius:14px; transition: transform .15s ease;}
     .progress{height:10px;background:#0b1220;border-radius:999px;overflow:hidden}
     .bar{height:100%;background:linear-gradient(90deg,#34d399,#22d3ee);width:0%}
     .chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -32,16 +30,46 @@
     .table{width:100%;border-collapse:collapse}
     .table th,.table td{border-bottom:1px solid #223049;padding:8px 6px;text-align:left;font-size:14px}
     .kbd{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;background:#0b1220;border:1px solid #334155;border-radius:8px;padding:.2em .45em}
+    .hint{font-size:13px;margin-top:6px}
+    .hint .bad{color:var(--warn)}
+    .hint .good{color:var(--ok)}
+
+    /* Fullscreen overlay */
+    .overlay {
+      position: fixed;
+      z-index: 9999;
+      inset: 0;
+      background: black;
+      display: none;
+    }
+    .overlay img {
+      position: absolute;
+      inset: env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0);
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .overlay .badge {
+      position: absolute;
+      top: calc(env(safe-area-inset-top,0) + 8px);
+      left: calc(env(safe-area-inset-left,0) + 8px);
+      background: rgba(0,0,0,0.5);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: #e5e7eb;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>映像評価 v2：20秒×10本（ランダム順序・自動DL・手動で次へ）</h1>
-    <p class="muted">要件対応版：<b>録画後に自動ダウンロード</b>、<b>開始製品はランダム（全体順序をシャッフル）</b>、<b>各録画後は「次を撮影」を押すまで待機</b>。ファイル名は <b>被験者ID（Prefix）＋連番（01〜10）</b> です。サーバー送信機能は含みません。</p>
+    <h1>映像評価 v2：20秒×10本（縦レイアウト版）</h1>
+    <p class="muted">録画中にプレビューの代わりに任意の<strong>画像を表示</strong>できます。<b>全画面表示</b>も選択可（録画される映像はカメラのまま）。<b>左右反転（ミラー）表示</b>はチェックで動的に切替できます。</p>
 
     <div class="grid">
       <div class="card">
-        <div class="grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="grid">
           <div>
             <label>被験者ID（ファイル名Prefixとして使用）</label>
             <input id="participantId" placeholder="例: P001" />
@@ -55,7 +83,7 @@
           </div>
         </div>
 
-        <div class="grid" style="margin-top:12px;grid-template-columns: 1fr 1fr;">
+        <div class="grid" style="margin-top:12px;">
           <div>
             <label>カウントダウン（秒）</label>
             <input id="countdownSec" type="number" min="0" value="10" />
@@ -66,10 +94,10 @@
           </div>
         </div>
 
-        <div class="grid" style="margin-top:12px">
+        <div class="grid" style="margin-top:12px;">
           <div>
             <label>製品名（10種類、必要なら編集）</label>
-            <textarea id="productList" rows="4">製品1
+            <textarea id="productList" rows="6">製品1
 製品2
 製品3
 製品4
@@ -79,21 +107,40 @@
 製品8
 製品9
 製品10</textarea>
-            <div class="muted" style="margin-top:4px">1行につき1製品。ちょうど10行にしてください（ファイル名には使いません）。</div>
+            <div class="muted" style="margin-top:4px">1行につき1製品。ちょうど10行にしてください（ファイル名にも使用）。</div>
+          </div>
+          <div>
+            <label>録画中に表示する画像（任意）</label>
+            <input id="altImage" type="file" accept="image/*" />
+
+            <div class="muted" style="margin-top:4px">※ 両方ON（枠＋全画面）の場合は全画面を優先。録画される映像は反転されません（表示のみ）。</div>
           </div>
         </div>
 
         <div class="row" style="margin-top:12px">
           <button id="btnSetup" class="primary">① カメラを準備（権限付与）</button>
-          <button id="btnStart" disabled>② 撮影セッション開始</button>
-          <button id="btnNext" disabled>次を撮影</button>
+          <button id="btnStart" disabled title="未準備の項目があります">② 撮影セッション開始</button>
           <button id="btnDiag">診断</button>
         </div>
-        <div class="muted" style="margin-top:6px">※ iPhone / Android どちらも対応。iOSでは<b>ユーザー操作から</b>カメラ開始が必要なため、必ず「カメラを準備」→「撮影セッション開始」の順にタップしてください。</div>
+        <div id="startHints" class="hint muted"></div>
+      </div>
+      <div>
+        <button id="btnNext" disabled>次を撮影</button>
+         </div>
+
+
+      <div style="display:flex; flex-direction:column; align-items:center; text-align:center;">
+        <input id="flipX" type="checkbox">
+        <label for="flipX">プレビューを左右反転（ミラー）表示</label>
       </div>
 
-      <div class="card">
-        <video id="preview" playsinline muted></video>
+
+
+  <div class="card">
+        <div style="position:relative">
+          <video id="preview" playsinline muted style="width:50%; display:block; margin:0 auto; background:black; border-radius:14px"></video>
+          <img id="altPreview" alt="録画中の代替表示" style="display:none; position:absolute; inset:0; width:100%; height:100%; object-fit:contain; border-radius:14px; background:black" />
+        </div>
         <div class="row" style="margin-top:8px">
           <div class="progress" style="flex:3"><div class="bar" id="progressBar"></div></div>
           <div style="flex:1;text-align:right"><span id="phaseLabel">準備待ち</span> <span class="muted" id="timeLeft"></span></div>
@@ -115,10 +162,25 @@
 
   </div>
 
+  <!-- Fullscreen overlay (not using Fullscreen API) -->
+  <div id="maskOverlay" class="overlay" aria-hidden="true">
+    <img id="altPreviewFull" alt="録画中の全画面代替表示" />
+    <div class="badge">録画中</div>
+  </div>
+
   <script>
     // ======== ユーティリティ ========
     const el = (id) => document.getElementById(id);
     const preview = el('preview');
+    const altPreview = el('altPreview');
+    const overlay = el('maskOverlay');
+    const altPreviewFull = el('altPreviewFull');
+
+    const altInput = el('altImage');
+    const useAlt = el('useAltDuringRecord');
+    const useFull = el('useFullscreenMask');
+    const flipToggle = el('flipX');
+
     const btnSetup = el('btnSetup');
     const btnStart = el('btnStart');
     const btnNext  = el('btnNext');
@@ -128,15 +190,21 @@
     const progressBar = el('progressBar');
     const clipsTableBody = document.querySelector('#clipsTable tbody');
     const chips = el('chips');
+    const startHints = el('startHints');
 
     let stream = null;
     let recorder = null;
     let chunks = [];
     let supportMime = null;
+    let altObjectUrl = null;
 
     let products = [];
     let order = [];
     let currentIndex = -1; // -1: not started
+
+    // --- Flip toggle ---
+    function applyFlip(){ preview.style.transform = flipToggle.checked ? 'scaleX(-1)' : 'none'; }
+    flipToggle.addEventListener('change', applyFlip);
 
     const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -173,39 +241,44 @@
       });
     }
 
-    function toggleStartButton(){
-      const idOk = !!el('participantId').value.trim();
-      const streamOk = !!stream;
-      const listOk = (()=>{
-        const lines = el('productList').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-        return lines.length === 10;
-      })();
-      btnStart.disabled = !(idOk && streamOk && listOk);
+    function getProductLines(){
+      return el('productList').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    }
+    function unmetReasons(){
+      const reasons = [];
+      if(!el('participantId').value.trim()) reasons.push('被験者IDが未入力');
+      if(!stream) reasons.push('カメラが未準備（「カメラを準備」を押してください）');
+      const lines = getProductLines();
+      if(lines.length !== 10) reasons.push(`製品行数が ${lines.length} 行（10行にしてください）`);
+      return reasons;
+    }
+    function updateStartUI(){
+      const reasons = unmetReasons();
+      const ok = reasons.length === 0;
+      btnStart.disabled = !ok;
+      btnStart.title = ok ? '' : ('開始できない理由：\n- ' + reasons.join('\n- '));
+      startHints.innerHTML = reasons.length
+        ? ('<span class="bad">開始できない理由：</span> ' + reasons.map(r=>`<span class="bad">${r}</span>`).join(' / '))
+        : '<span class="good">開始可能です。② 撮影セッション開始 を押してください。</span>';
     }
 
+    // Camera setup
     async function setupCamera(){
       try {
-        if (!window.isSecureContext) {
-          console.warn('Not a secure context (https). getUserMedia may fail.');
-        }
+        if (!window.isSecureContext) console.warn('Not a secure context (https). getUserMedia may fail.');
         const facing = el('cameraFacing').value;
-        let firstError = null;
         try {
-          // 第1試行：希望のカメラ指定
           stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: { ideal: facing }, width:{ideal:1280}, height:{ideal:720} },
             audio: true
           });
         } catch (e1) {
-          firstError = e1;
           console.warn('getUserMedia first attempt failed:', e1 && e1.name, e1 && e1.message);
-          // 第2試行：フォールバック（制約を緩める）
           stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         }
         preview.srcObject = stream;
         await preview.play().catch(()=>{});
         supportMime = pickSupportedMime();
-        btnStart.disabled = false;
         phaseLabel.textContent = '準備OK';
       } catch (err) {
         console.error('getUserMedia error:', err && err.name, err && err.message);
@@ -214,7 +287,7 @@
         let hint = '・ブラウザの権限設定でカメラ/マイクを許可してください。\n・別アプリがカメラを使用中でないか確認してください。' + secureHint;
         switch (err && err.name) {
           case 'NotAllowedError':
-            hint = '・権限が拒否されています。Chromeの「サイトの設定」でこのサイトのカメラ/マイクを許可してください。' + secureHint; break;
+            hint = '・権限が拒否されています。ブラウザの「サイトの設定」でこのサイトのカメラ/マイクを許可してください。' + secureHint; break;
           case 'NotFoundError':
             hint = '・カメラ/マイクが見つかりません。別アプリ使用中の可能性があります。'; break;
           case 'NotReadableError':
@@ -226,12 +299,13 @@
         }
         alert('カメラ/マイクを開始できませんでした。\n理由: ' + (err && err.name ? err.name : '不明') + '\n\n' + hint);
       } finally {
-        toggleStartButton();
+        updateStartUI();
+        applyFlip(); // reflect current checkbox state
       }
     }
 
     function parseProducts(){
-      const lines = el('productList').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+      const lines = getProductLines();
       if(lines.length !== 10){
         alert(`製品名は10行で入力してください（現在: ${lines.length} 行）`);
         return null;
@@ -239,23 +313,42 @@
       return lines;
     }
 
-    function updateProgress(p){
-      progressBar.style.width = `${Math.max(0, Math.min(100, p*100))}%`;
+    function updateProgress(p){ progressBar.style.width = `${Math.max(0, Math.min(100, p*100))}%`; }
+
+    // Alt image loading
+    altInput?.addEventListener('change', (ev)=>{
+      const f = ev.target.files && ev.target.files[0];
+      if(!f) return;
+      if(altObjectUrl){ URL.revokeObjectURL(altObjectUrl); altObjectUrl = null; }
+      altObjectUrl = URL.createObjectURL(f);
+      altPreview.src = altObjectUrl;
+      altPreviewFull.src = altObjectUrl;
+    });
+
+    // ファイル名用のサニタイズ
+    function sanitizeForFilename(s){
+    return s
+    .replace(/[\x00-\x1F\x7F]/g, '_')        // 制御文字を除去
+    .replace(/[\\/:*?"<>|#%&{}$!'@+`=~;,]/g, '_') // NG記号
+    .replace(/\s+/g, '_');                   // 連続空白→ _
     }
+
 
     function addClipRow({blob, productName, durationMs, mimeType}){
       const tr = document.createElement('tr');
       const url = URL.createObjectURL(blob);
-      const id = el('participantId').value.trim();
+      const id = el('participantId').value.trim() || 'Unknown';
       const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-      const seq = String(clipsTableBody.children.length + 1).padStart(2,'0');
-      const filename = `${id}${seq}.${ext}`.replace(/\s+/g,'_');
+      const seqNum = clipsTableBody.children.length + 1;
+      const seq = String(seqNum).padStart(2,'0');
+      const safeProd = sanitizeForFilename(productName);
+      const filename = `${id}_${seq}_${safeProd}.${ext}`;
 
       tr.innerHTML = `
-        <td>${parseInt(seq,10)}</td>
+        <td>${seqNum}</td>
         <td>${productName}</td>
         <td>${(durationMs/1000).toFixed(1)} s</td>
-        <td><a download="${filename}" href="${url}">ダウンロード</a></td>
+        <td><a download="${filename}" href="${url}">${filename}</a></td>
       `;
       clipsTableBody.appendChild(tr);
     }
@@ -268,7 +361,7 @@
       phaseLabel.textContent = `カウントダウン (${productName})`;
       for(let t=countdownSec; t>0; t--){
         timeLeft.textContent = `${t}s`; updateProgress((countdownSec - t)/countdownSec);
-        await sleep(1000);
+        await new Promise(r=>setTimeout(r,1000));
       }
       timeLeft.textContent = '0s'; updateProgress(1);
 
@@ -290,6 +383,13 @@
       recorder.onstop = ()=>{ stopped = true; };
       recorder.start();
 
+      // Show mask
+      const hasImg = !!altPreviewFull.src;
+      const maskFull = !!(useFull && useFull.checked && hasImg);
+      const maskInline = !maskFull && !!(useAlt && useAlt.checked && hasImg);
+      if(maskFull){ overlay.style.display = 'block'; }
+      if(maskInline){ preview.style.visibility = 'hidden'; altPreview.style.display = 'block'; }
+
       const targetMs = recordSec*1000;
       const tickInt = setInterval(()=>{
         const elapsed = Date.now() - startAt;
@@ -297,24 +397,31 @@
         timeLeft.textContent = `${Math.ceil(remain/1000)}s`;
         updateProgress(elapsed/targetMs);
       }, 200);
-      await sleep(targetMs);
+      await new Promise(r=>setTimeout(r,targetMs));
       try{ recorder.stop(); }catch(_){}
-      for(let k=0;k<10 && !stopped;k++) await sleep(100);
+      for(let k=0;k<10 && !stopped;k++) await new Promise(r=>setTimeout(r,100));
       clearInterval(tickInt);
+
+      // Hide mask
+      overlay.style.display = 'none';
+      altPreview.style.display = 'none';
+      preview.style.visibility = 'visible';
 
       const blob = new Blob(chunks, {type: recorder.mimeType || mime || 'video/webm'});
       const durationMs = Date.now() - startAt;
 
-      // 自動ダウンロード（被験者ID＋連番）
-      const idForName = el('participantId').value.trim();
+      // 自動DL（Prefix + 評価順 + 製品名 + 拡張子）
+      const idForName = el('participantId').value.trim() || 'Unknown';
       const extForName = (recorder.mimeType || mime || 'video/webm').includes('mp4') ? 'mp4' : 'webm';
-      const seqForName = String(clipsTableBody.children.length + 1).padStart(2,'0');
-      const autoName = `${idForName}${seqForName}.${extForName}`.replace(/\s+/g,'_');
+      const seqNum = clipsTableBody.children.length + 1;
+      const seqForName = String(seqNum).padStart(2,'0');
+      const safeProd = sanitizeForFilename(productName);
+      const autoName = `${idForName}_${seqForName}_${safeProd}.${extForName}`;
       const tmpUrl = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = tmpUrl; a.download = autoName; document.body.appendChild(a); a.click();
       setTimeout(()=>{ URL.revokeObjectURL(tmpUrl); a.remove(); }, 1500);
 
-      // 一覧に追加（再ダウンロード可）
+      // 一覧に追加
       addClipRow({blob, productName, durationMs, mimeType: blob.type});
 
       phaseLabel.textContent = '待機中（次を撮影を押してください）';
@@ -335,21 +442,20 @@
       el('cameraFacing').disabled = true;
       btnSetup.disabled = true;
 
-      // ランダム順序（開始位置もランダム）
       order = shuffle([...Array(products.length).keys()]);
-      currentIndex = -1; // まだ開始していない
+      currentIndex = -1;
       renderChips();
 
       phaseLabel.textContent = '待機中（次を撮影を押してください）';
       btnNext.disabled = false;
+      updateStartUI();
     }
 
-    // ======== 簡易診断 ========
     async function diagnose(){
       try{
         const secure = window.isSecureContext;
         if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-          alert('navigator.mediaDevices.enumerateDevices() が利用できません。このブラウザではカメラ診断が制限されています。');
+          alert('enumerateDevices() が利用できません。');
           return;
         }
         const list = await navigator.mediaDevices.enumerateDevices();
@@ -360,30 +466,30 @@
       }
     }
 
-    // ======== イベント配線 ========
+    // Wire events
     btnSetup.addEventListener('click', setupCamera);
     btnStart.addEventListener('click', runSession);
     btnDiag.addEventListener('click', diagnose);
-    el('participantId').addEventListener('input', toggleStartButton);
-    el('productList').addEventListener('input', toggleStartButton);
+    el('participantId').addEventListener('input', updateStartUI);
+    el('productList').addEventListener('input', updateStartUI);
+    document.addEventListener('DOMContentLoaded', ()=>{ updateStartUI(); applyFlip(); });
 
     btnNext.addEventListener('click', async ()=>{
       if(order.length === 0){ return; }
       const nextIdx = currentIndex + 1;
-      if(nextIdx >= 10){ // 10本撮り切り
+      if(nextIdx >= 10){
         alert('すべての録画が完了しています。');
         return;
       }
-      btnNext.disabled = true; // 二重押し防止
+      btnNext.disabled = true;
       currentIndex = nextIdx;
       renderChips();
       const productName = products[ order[currentIndex] ];
       await recordOne(productName);
-      if(currentIndex >= 9){ // 10本完了
+      if(currentIndex >= 9){
         phaseLabel.textContent = '完了（全10本）';
         alert('10本の録画が完了しました。クリップ一覧から保存内容をご確認ください。');
         btnNext.disabled = true;
-        // 再実施を許可
         btnStart.disabled = false;
         el('productList').disabled = false;
         el('participantId').disabled = false;
@@ -392,6 +498,7 @@
       }else{
         btnNext.disabled = false;
       }
+      updateStartUI();
     });
 
     document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && preview.srcObject) preview.play().catch(()=>{}); });
