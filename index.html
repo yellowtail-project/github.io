@@ -1,38 +1,189 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>映像評価 v2：ランダム順序・自動DL・手動／録画中は画像表示（全画面対応・ミラー切替・縦レイアウト）</title>
+  <title>映像評価 v2：録画中は常に全画面画像（URL固定）</title>
   <style>
-    :root { --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --ok:#10b981; --warn:#f59e0b; --err:#ef4444; --ink:#e5e7eb; }
-    html,body{height:100%;background:var(--bg);color:var(--ink);font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", Meiryo, "Apple Color Emoji", "Segoe UI Emoji"; margin:0; }
-    .wrap{max-width:900px;margin:0 auto;padding:16px;}
-    h1{font-weight:700;font-size:clamp(20px,4vw,28px);margin:8px 0 12px}
-    .card{background:var(--panel);border-radius:18px;padding:16px;box-shadow: 0 6px 30px rgba(0,0,0,.2);}
-    .grid{display:grid;gap:12px;grid-template-columns:1fr !important;}
-    label{font-size:14px;color:var(--muted)}
-    input,select,button,textarea{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #1f2937;background:#0b1220;color:var(--ink);font-size:16px}
-    input::placeholder{color:#64748b}
-    button{cursor:pointer;background:#1f2937;border-color:#334155;transition: .15s}
-    button.primary{background:linear-gradient(180deg,#22c55e,#16a34a);border:0;color:white;font-weight:700}
-    button:disabled{opacity:.5;cursor:not-allowed}
-    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .muted{color:var(--muted)}
-    .ok{color:var(--ok)}
-    .warn{color:var(--warn)}
-    .err{color:var(--err)}
-    video{width:100%;background:black;border-radius:14px; transition: transform .15s ease;}
-    .progress{height:10px;background:#0b1220;border-radius:999px;overflow:hidden}
-    .bar{height:100%;background:linear-gradient(90deg,#34d399,#22d3ee);width:0%}
-    .chips{display:flex;flex-wrap:wrap;gap:8px}
-    .chip{padding:6px 10px;border-radius:999px;background:#0b1220;border:1px solid #334155;color:#cbd5e1;font-size:12px}
-    .table{width:100%;border-collapse:collapse}
-    .table th,.table td{border-bottom:1px solid #223049;padding:8px 6px;text-align:left;font-size:14px}
-    .kbd{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;background:#0b1220;border:1px solid #334155;border-radius:8px;padding:.2em .45em}
-    .hint{font-size:13px;margin-top:6px}
-    .hint .bad{color:var(--warn)}
-    .hint .good{color:var(--ok)}
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --muted: #94a3b8;
+      --ok: #10b981;
+      --warn: #f59e0b;
+      --err: #ef4444;
+      --ink: #e5e7eb;
+    }
+
+    html,
+    body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", Meiryo, "Apple Color Emoji", "Segoe UI Emoji";
+      margin: 0;
+    }
+
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    h1 {
+      font-weight: 700;
+      font-size: clamp(20px, 4vw, 28px);
+      margin: 8px 0 12px
+    }
+
+    .card {
+      background: var(--panel);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 6px 30px rgba(0, 0, 0, .2);
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr !important;
+    }
+
+    label {
+      font-size: 14px;
+      color: var(--muted)
+    }
+
+    input,
+    select,
+    button,
+    textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+      background: #0b1220;
+      color: var(--ink);
+      font-size: 16px
+    }
+
+    input::placeholder {
+      color: #64748b
+    }
+
+    button {
+      cursor: pointer;
+      background: #1f2937;
+      border-color: #334155;
+      transition: .15s
+    }
+
+    button.primary {
+      background: linear-gradient(180deg, #22c55e, #16a34a);
+      border: 0;
+      color: white;
+      font-weight: 700
+    }
+
+    button:disabled {
+      opacity: .5;
+      cursor: not-allowed
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    .muted {
+      color: var(--muted)
+    }
+
+    .ok {
+      color: var(--ok)
+    }
+
+    .warn {
+      color: var(--warn)
+    }
+
+    .err {
+      color: var(--err)
+    }
+
+    video {
+      width: 50%;
+      display: block;
+      margin: 0 auto;
+      background: black;
+      border-radius: 14px;
+      transition: transform .15s ease;
+    }
+
+    .progress {
+      height: 10px;
+      background: #0b1220;
+      border-radius: 999px;
+      overflow: hidden
+    }
+
+    .bar {
+      height: 100%;
+      background: linear-gradient(90deg, #34d399, #22d3ee);
+      width: 0%
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px
+    }
+
+    .chip {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #0b1220;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      font-size: 12px
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse
+    }
+
+    .table th,
+    .table td {
+      border-bottom: 1px solid #223049;
+      padding: 8px 6px;
+      text-align: left;
+      font-size: 14px
+    }
+
+    .kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      background: #0b1220;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: .2em .45em
+    }
+
+    .hint {
+      font-size: 13px;
+      margin-top: 6px
+    }
+
+    .hint .bad {
+      color: var(--warn)
+    }
+
+    .hint .good {
+      color: var(--ok)
+    }
 
     /* Fullscreen overlay */
     .overlay {
@@ -42,18 +193,20 @@
       background: black;
       display: none;
     }
+
     .overlay img {
       position: absolute;
-      inset: env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0);
+      inset: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
       width: 100%;
       height: 100%;
       object-fit: contain;
     }
+
     .overlay .badge {
       position: absolute;
-      top: calc(env(safe-area-inset-top,0) + 8px);
-      left: calc(env(safe-area-inset-left,0) + 8px);
-      background: rgba(0,0,0,0.5);
+      top: calc(env(safe-area-inset-top, 0) + 8px);
+      left: calc(env(safe-area-inset-left, 0) + 8px);
+      background: rgba(0, 0, 0, 0.5);
       padding: 6px 10px;
       border-radius: 999px;
       font-size: 12px;
@@ -62,10 +215,11 @@
     }
   </style>
 </head>
+
 <body>
   <div class="wrap">
-    <h1>映像評価 v2：20秒×10本（縦レイアウト版）</h1>
-    <p class="muted">録画中にプレビューの代わりに任意の<strong>画像を表示</strong>できます。<b>全画面表示</b>も選択可（録画される映像はカメラのまま）。<b>左右反転（ミラー）表示</b>はチェックで動的に切替できます。</p>
+    <h1>映像評価 v2：20秒×10本（録画中は常に全画面画像・URL固定）</h1>
+    <p class="muted">録画中は<strong>常に</strong>指定画像を<strong>全画面で表示</strong>します（オフ不可）。画像はHTML内で固定設定されています。</p>
 
     <div class="grid">
       <div class="card">
@@ -110,40 +264,34 @@
             <div class="muted" style="margin-top:4px">1行につき1製品。ちょうど10行にしてください（ファイル名にも使用）。</div>
           </div>
           <div>
-            <label>録画中に表示する画像（任意）</label>
-            <input id="altImage" type="file" accept="image/*" />
-
-            <div class="muted" style="margin-top:4px">※ 両方ON（枠＋全画面）の場合は全画面を優先。録画される映像は反転されません（表示のみ）。</div>
+            <label>録画中に表示する画像（固定設定）</label>
+            <div class="hint">この画像はHTML内の <span class="kbd">ALT_IMAGE_URL</span> で指定されています。</div>
+            <div style="display:flex; flex-direction:column; align-items:center; text-align:center; margin-top:10px;">
+              <input id="flipX" type="checkbox">
+              <label for="flipX">プレビューを左右反転（ミラー）表示</label>
+            </div>
           </div>
         </div>
 
         <div class="row" style="margin-top:12px">
           <button id="btnSetup" class="primary">① カメラを準備（権限付与）</button>
           <button id="btnStart" disabled title="未準備の項目があります">② 撮影セッション開始</button>
+          <button id="btnNext" disabled>次を撮影</button>
           <button id="btnDiag">診断</button>
         </div>
         <div id="startHints" class="hint muted"></div>
       </div>
-      <div>
-        <button id="btnNext" disabled>次を撮影</button>
-         </div>
 
-
-      <div style="display:flex; flex-direction:column; align-items:center; text-align:center;">
-        <input id="flipX" type="checkbox">
-        <label for="flipX">プレビューを左右反転（ミラー）表示</label>
-      </div>
-
-
-
-  <div class="card">
+      <div class="card">
         <div style="position:relative">
-          <video id="preview" playsinline muted style="width:50%; display:block; margin:0 auto; background:black; border-radius:14px"></video>
-          <img id="altPreview" alt="録画中の代替表示" style="display:none; position:absolute; inset:0; width:100%; height:100%; object-fit:contain; border-radius:14px; background:black" />
+          <video id="preview" playsinline muted></video>
         </div>
         <div class="row" style="margin-top:8px">
-          <div class="progress" style="flex:3"><div class="bar" id="progressBar"></div></div>
-          <div style="flex:1;text-align:right"><span id="phaseLabel">準備待ち</span> <span class="muted" id="timeLeft"></span></div>
+          <div class="progress" style="flex:3">
+            <div class="bar" id="progressBar"></div>
+          </div>
+          <div style="flex:1;text-align:right"><span id="phaseLabel">準備待ち</span> <span class="muted"
+              id="timeLeft"></span></div>
         </div>
         <div class="chips" style="margin-top:8px" id="chips"></div>
       </div>
@@ -153,7 +301,12 @@
       <h3 style="margin:0 0 8px">収録クリップ（自動DL＋再DL可）</h3>
       <table class="table" id="clipsTable">
         <thead>
-          <tr><th>#</th><th>製品名</th><th>長さ</th><th>ファイル</th></tr>
+          <tr>
+            <th>#</th>
+            <th>製品名</th>
+            <th>長さ</th>
+            <th>ファイル</th>
+          </tr>
         </thead>
         <tbody></tbody>
       </table>
@@ -162,29 +315,26 @@
 
   </div>
 
-  <!-- Fullscreen overlay (not using Fullscreen API) -->
+  <!-- Fullscreen overlay -->
   <div id="maskOverlay" class="overlay" aria-hidden="true">
     <img id="altPreviewFull" alt="録画中の全画面代替表示" />
     <div class="badge">録画中</div>
   </div>
 
   <script>
+    // 固定の録画中オーバーレイ画像URL（ユーザーは変更不可）
+    const ALT_IMAGE_URL = "https://yellowtail-project.github.io/testpage/test_background3.png"; // ★ここを差し替えてご利用ください
+
     // ======== ユーティリティ ========
     const el = (id) => document.getElementById(id);
     const preview = el('preview');
-    const altPreview = el('altPreview');
     const overlay = el('maskOverlay');
     const altPreviewFull = el('altPreviewFull');
-
-    const altInput = el('altImage');
-    const useAlt = el('useAltDuringRecord');
-    const useFull = el('useFullscreenMask');
     const flipToggle = el('flipX');
-
     const btnSetup = el('btnSetup');
     const btnStart = el('btnStart');
-    const btnNext  = el('btnNext');
-    const btnDiag  = el('btnDiag');
+    const btnNext = el('btnNext');
+    const btnDiag = el('btnDiag');
     const phaseLabel = el('phaseLabel');
     const timeLeft = el('timeLeft');
     const progressBar = el('progressBar');
@@ -192,316 +342,212 @@
     const chips = el('chips');
     const startHints = el('startHints');
 
-    let stream = null;
-    let recorder = null;
-    let chunks = [];
-    let supportMime = null;
-    let altObjectUrl = null;
+    let stream = null, recorder = null, chunks = [], supportMime = null, loadedImage = false;
+    let products = [], order = [], currentIndex = -1;
 
-    let products = [];
-    let order = [];
-    let currentIndex = -1; // -1: not started
+    function getProductLines() { return el('productList').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean); }
 
-    // --- Flip toggle ---
-    function applyFlip(){ preview.style.transform = flipToggle.checked ? 'scaleX(-1)' : 'none'; }
+    // Flip
+    function applyFlip() { preview.style.transform = flipToggle.checked ? 'scaleX(-1)' : 'none'; }
     flipToggle.addEventListener('change', applyFlip);
 
-    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-    function pickSupportedMime(){
-      const cands = [
-        'video/webm;codecs=vp9',
-        'video/webm;codecs=vp8',
-        'video/webm;codecs=h264',
-        'video/webm',
-        'video/mp4;codecs=h264',
-        'video/mp4'
-      ];
-      for(const m of cands){
-        if(window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m;
-      }
-      return '';
-    }
-
-    function shuffle(arr){
-      const a = arr.slice();
-      for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; }
-      return a;
-    }
-
-    function renderChips(){
-      chips.innerHTML = '';
-      const list = order.length ? order.map(i=>products[i]) : products;
-      list.forEach((name, i)=>{
-        const span = document.createElement('span');
-        span.className = 'chip';
-        const active = (i===currentIndex);
-        span.textContent = `${i+1}. ${name}` + (active ? '（撮影中）' : '');
-        chips.appendChild(span);
+    // 画像の事前ロード（固定URL）
+    async function loadImageFromUrl(url) {
+      if (!url) { loadedImage = false; altPreviewFull.removeAttribute('src'); return false; }
+      return new Promise((resolve) => {
+        const test = new Image();
+        test.onload = () => { altPreviewFull.src = url; loadedImage = true; resolve(true); };
+        test.onerror = () => { loadedImage = false; altPreviewFull.removeAttribute('src'); resolve(false); };
+        test.crossOrigin = 'anonymous';
+        test.src = url;
       });
     }
 
-    function getProductLines(){
-      return el('productList').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-    }
-    function unmetReasons(){
+    function unmetReasons() {
       const reasons = [];
-      if(!el('participantId').value.trim()) reasons.push('被験者IDが未入力');
-      if(!stream) reasons.push('カメラが未準備（「カメラを準備」を押してください）');
+      if (!el('participantId').value.trim()) reasons.push('被験者IDが未入力');
+      if (!stream) reasons.push('カメラが未準備（「カメラを準備」を押してください）');
       const lines = getProductLines();
-      if(lines.length !== 10) reasons.push(`製品行数が ${lines.length} 行（10行にしてください）`);
+      if (lines.length !== 10) reasons.push(`製品行数が ${lines.length} 行（10行にしてください）`);
+      if (!loadedImage) reasons.push('固定画像の読み込みに失敗（ALT_IMAGE_URL を確認）');
       return reasons;
     }
-    function updateStartUI(){
+
+    function updateStartUI() {
       const reasons = unmetReasons();
       const ok = reasons.length === 0;
       btnStart.disabled = !ok;
       btnStart.title = ok ? '' : ('開始できない理由：\n- ' + reasons.join('\n- '));
       startHints.innerHTML = reasons.length
-        ? ('<span class="bad">開始できない理由：</span> ' + reasons.map(r=>`<span class="bad">${r}</span>`).join(' / '))
+        ? ('<span class="bad">開始できない理由：</span> ' + reasons.map(r => `<span class="bad">${r}</span>`).join(' / '))
         : '<span class="good">開始可能です。② 撮影セッション開始 を押してください。</span>';
     }
 
-    // Camera setup
-    async function setupCamera(){
+    el('participantId').addEventListener('input', updateStartUI);
+    el('productList').addEventListener('input', updateStartUI);
+
+    function shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
+    function renderChips() {
+      chips.innerHTML = '';
+      const list = order.length ? order.map(i => products[i]) : products;
+      list.forEach((name, i) => {
+        const span = document.createElement('span');
+        span.className = 'chip';
+        const active = (i === currentIndex);
+        span.textContent = `${i + 1}. ${name}` + (active ? '（撮影中）' : '');
+        chips.appendChild(span);
+      });
+    }
+
+    function pickSupportedMime() {
+      const cands = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm;codecs=h264', 'video/webm', 'video/mp4;codecs=h264', 'video/mp4'];
+      for (const m of cands) { if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m; }
+      return '';
+    }
+    function updateProgress(p) { progressBar.style.width = `${Math.max(0, Math.min(100, p * 100))}%`; }
+
+    async function setupCamera() {
       try {
         if (!window.isSecureContext) console.warn('Not a secure context (https). getUserMedia may fail.');
         const facing = el('cameraFacing').value;
         try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: facing }, width:{ideal:1280}, height:{ideal:720} },
-            audio: true
-          });
-        } catch (e1) {
-          console.warn('getUserMedia first attempt failed:', e1 && e1.name, e1 && e1.message);
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: true });
+        } catch (_) {
           stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         }
-        preview.srcObject = stream;
-        await preview.play().catch(()=>{});
-        supportMime = pickSupportedMime();
-        phaseLabel.textContent = '準備OK';
+        preview.srcObject = stream; await preview.play().catch(() => { });
+        supportMime = pickSupportedMime(); phaseLabel.textContent = '準備OK';
       } catch (err) {
-        console.error('getUserMedia error:', err && err.name, err && err.message);
-        phaseLabel.textContent = 'カメラ開始に失敗';
-        const secureHint = window.isSecureContext ? '' : '\n・このページを https で開いてください（http/fileでは不可）';
-        let hint = '・ブラウザの権限設定でカメラ/マイクを許可してください。\n・別アプリがカメラを使用中でないか確認してください。' + secureHint;
-        switch (err && err.name) {
-          case 'NotAllowedError':
-            hint = '・権限が拒否されています。ブラウザの「サイトの設定」でこのサイトのカメラ/マイクを許可してください。' + secureHint; break;
-          case 'NotFoundError':
-            hint = '・カメラ/マイクが見つかりません。別アプリ使用中の可能性があります。'; break;
-          case 'NotReadableError':
-            hint = '・デバイスが占有中です。他のアプリを終了してから再試行してください。'; break;
-          case 'OverconstrainedError':
-            hint = '・指定のカメラ条件に合うデバイスが見つかりません。イン/アウト切替を変更して再試行してください。'; break;
-          case 'SecurityError':
-            hint = (window.isSecureContext ? '・端末のポリシー/MDMで制限されている可能性があります。' : '・https で開いてください。'); break;
-        }
-        alert('カメラ/マイクを開始できませんでした。\n理由: ' + (err && err.name ? err.name : '不明') + '\n\n' + hint);
+        phaseLabel.textContent = 'カメラ開始に失敗'; alert('カメラ/マイク権限を許可してください。');
       } finally {
-        updateStartUI();
-        applyFlip(); // reflect current checkbox state
+        applyFlip(); updateStartUI();
       }
     }
+    btnSetup.addEventListener('click', setupCamera);
 
-    function parseProducts(){
+    // Safe filename sanitizer
+    function sanitizeForFilename(s) {
+      return s
+        .replace(/[\x00-\x1F\x7F]/g, '_')                 // control chars
+        .replace(/[\\/:*?"<>|#%&{}$!'@+`=~;,]/g, '_')     // reserved/special
+        .replace(/\s+/g, '_');                              // whitespace to _
+    }
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    async function recordOne(productName) {
+      const countdownSec = Math.max(0, parseInt(el('countdownSec').value || '10', 10));
+      const recordSec = 20;
+
+      // Count down
+      phaseLabel.textContent = `カウントダウン (${productName})`;
+      for (let t = countdownSec; t > 0; t--) { timeLeft.textContent = `${t}s`; updateProgress((countdownSec - t) / countdownSec); await sleep(1000); }
+      timeLeft.textContent = '0s'; updateProgress(1);
+
+      // Record
+      phaseLabel.textContent = '録画中'; updateProgress(0); chunks = [];
+      const mime = supportMime || undefined;
+      try { recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined); } catch (e) { alert('このブラウザは録画に対応していません'); return; }
+      let stopped = false; const startAt = Date.now();
+      recorder.ondataavailable = (ev) => { if (ev.data && ev.data.size > 0) chunks.push(ev.data); };
+      recorder.onstop = () => { stopped = true; };
+      recorder.start();
+
+      // Always fullscreen mask
+      overlay.style.display = 'block';
+
+      const targetMs = recordSec * 1000;
+      const tickInt = setInterval(() => {
+        const elapsed = Date.now() - startAt; const remain = Math.max(0, targetMs - elapsed);
+        timeLeft.textContent = `${Math.ceil(remain / 1000)}s`; updateProgress(elapsed / targetMs);
+      }, 200);
+      await sleep(targetMs);
+      try { recorder.stop(); } catch (_) { }
+      for (let k = 0; k < 10 && !stopped; k++) await sleep(100);
+      clearInterval(tickInt);
+
+      // Hide overlay
+      overlay.style.display = 'none';
+
+      const blob = new Blob(chunks, { type: recorder.mimeType || mime || 'video/webm' });
+      const durationMs = Date.now() - startAt;
+
+      // Auto download
+      const id = el('participantId').value.trim() || 'Unknown';
+      const seqNum = clipsTableBody.children.length + 1; const seq = String(seqNum).padStart(2, '0');
+      const safeProd = sanitizeForFilename(productName);
+      const ext = (recorder.mimeType || mime || 'video/webm').includes('mp4') ? 'mp4' : 'webm';
+      const filename = `${id}_${seq}_${safeProd}.${ext}`;
+      const tmpUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = tmpUrl; a.download = filename; document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(tmpUrl); a.remove(); }, 1500);
+
+      // Row for re-download
+      const tr = document.createElement('tr'); const url = URL.createObjectURL(blob);
+      tr.innerHTML = `<td>${seqNum}</td><td>${productName}</td><td>${(durationMs / 1000).toFixed(1)} s</td><td><a download="${filename}" href="${url}">${filename}</a></td>`;
+      clipsTableBody.appendChild(tr);
+
+      phaseLabel.textContent = '待機中（次を撮影を押してください）'; timeLeft.textContent = ''; updateProgress(0);
+    }
+
+    function parseProducts() {
       const lines = getProductLines();
-      if(lines.length !== 10){
-        alert(`製品名は10行で入力してください（現在: ${lines.length} 行）`);
-        return null;
-      }
+      if (lines.length !== 10) { alert(`製品名は10行で入力してください（現在: ${lines.length} 行）`); return null; }
       return lines;
     }
 
-    function updateProgress(p){ progressBar.style.width = `${Math.max(0, Math.min(100, p*100))}%`; }
+    btnStart.addEventListener('click', async () => {
+      // 固定画像の読み込みを最終確認
+      const ok = await loadImageFromUrl(ALT_IMAGE_URL);
+      if (!ok) { alert('固定画像URL (ALT_IMAGE_URL) を確認してください。'); return; }
 
-    // Alt image loading
-    altInput?.addEventListener('change', (ev)=>{
-      const f = ev.target.files && ev.target.files[0];
-      if(!f) return;
-      if(altObjectUrl){ URL.revokeObjectURL(altObjectUrl); altObjectUrl = null; }
-      altObjectUrl = URL.createObjectURL(f);
-      altPreview.src = altObjectUrl;
-      altPreviewFull.src = altObjectUrl;
-    });
-
-    // ファイル名用のサニタイズ
-    function sanitizeForFilename(s){
-    return s
-    .replace(/[\x00-\x1F\x7F]/g, '_')        // 制御文字を除去
-    .replace(/[\\/:*?"<>|#%&{}$!'@+`=~;,]/g, '_') // NG記号
-    .replace(/\s+/g, '_');                   // 連続空白→ _
-    }
-
-
-    function addClipRow({blob, productName, durationMs, mimeType}){
-      const tr = document.createElement('tr');
-      const url = URL.createObjectURL(blob);
-      const id = el('participantId').value.trim() || 'Unknown';
-      const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-      const seqNum = clipsTableBody.children.length + 1;
-      const seq = String(seqNum).padStart(2,'0');
-      const safeProd = sanitizeForFilename(productName);
-      const filename = `${id}_${seq}_${safeProd}.${ext}`;
-
-      tr.innerHTML = `
-        <td>${seqNum}</td>
-        <td>${productName}</td>
-        <td>${(durationMs/1000).toFixed(1)} s</td>
-        <td><a download="${filename}" href="${url}">${filename}</a></td>
-      `;
-      clipsTableBody.appendChild(tr);
-    }
-
-    async function recordOne(productName){
-      const countdownSec = Math.max(0, parseInt(el('countdownSec').value || '10', 10));
-      const recordSec = 20; // 固定
-
-      // カウントダウン
-      phaseLabel.textContent = `カウントダウン (${productName})`;
-      for(let t=countdownSec; t>0; t--){
-        timeLeft.textContent = `${t}s`; updateProgress((countdownSec - t)/countdownSec);
-        await new Promise(r=>setTimeout(r,1000));
-      }
-      timeLeft.textContent = '0s'; updateProgress(1);
-
-      // 録画
-      phaseLabel.textContent = '録画中';
-      updateProgress(0);
-      chunks = [];
-      const mime = supportMime || undefined;
-      try{
-        recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
-      }catch(e){
-        console.error(e);
-        alert('このブラウザは動画の録画に対応していない可能性があります。最新のSafari/Chrome等をご利用ください。');
-        return;
-      }
-      const startAt = Date.now();
-      let stopped = false;
-      recorder.ondataavailable = (ev)=>{ if(ev.data && ev.data.size>0) chunks.push(ev.data); };
-      recorder.onstop = ()=>{ stopped = true; };
-      recorder.start();
-
-      // Show mask
-      const hasImg = !!altPreviewFull.src;
-      const maskFull = !!(useFull && useFull.checked && hasImg);
-      const maskInline = !maskFull && !!(useAlt && useAlt.checked && hasImg);
-      if(maskFull){ overlay.style.display = 'block'; }
-      if(maskInline){ preview.style.visibility = 'hidden'; altPreview.style.display = 'block'; }
-
-      const targetMs = recordSec*1000;
-      const tickInt = setInterval(()=>{
-        const elapsed = Date.now() - startAt;
-        const remain = Math.max(0, targetMs - elapsed);
-        timeLeft.textContent = `${Math.ceil(remain/1000)}s`;
-        updateProgress(elapsed/targetMs);
-      }, 200);
-      await new Promise(r=>setTimeout(r,targetMs));
-      try{ recorder.stop(); }catch(_){}
-      for(let k=0;k<10 && !stopped;k++) await new Promise(r=>setTimeout(r,100));
-      clearInterval(tickInt);
-
-      // Hide mask
-      overlay.style.display = 'none';
-      altPreview.style.display = 'none';
-      preview.style.visibility = 'visible';
-
-      const blob = new Blob(chunks, {type: recorder.mimeType || mime || 'video/webm'});
-      const durationMs = Date.now() - startAt;
-
-      // 自動DL（Prefix + 評価順 + 製品名 + 拡張子）
-      const idForName = el('participantId').value.trim() || 'Unknown';
-      const extForName = (recorder.mimeType || mime || 'video/webm').includes('mp4') ? 'mp4' : 'webm';
-      const seqNum = clipsTableBody.children.length + 1;
-      const seqForName = String(seqNum).padStart(2,'0');
-      const safeProd = sanitizeForFilename(productName);
-      const autoName = `${idForName}_${seqForName}_${safeProd}.${extForName}`;
-      const tmpUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = tmpUrl; a.download = autoName; document.body.appendChild(a); a.click();
-      setTimeout(()=>{ URL.revokeObjectURL(tmpUrl); a.remove(); }, 1500);
-
-      // 一覧に追加
-      addClipRow({blob, productName, durationMs, mimeType: blob.type});
-
-      phaseLabel.textContent = '待機中（次を撮影を押してください）';
-      timeLeft.textContent = '';
-      updateProgress(0);
-    }
-
-    async function runSession(){
       const id = el('participantId').value.trim();
-      products = parseProducts();
-      if(!products) return;
-      if(!id){ alert('最初に被験者ID（ファイル名の接頭辞）を入力してください。'); return; }
-      if(!stream){ alert('先に「カメラを準備」を押してください。'); return; }
+      products = parseProducts(); if (!products) return;
+      if (!id) { alert('被験者IDを入力してください'); return; }
+      if (!stream) { alert('先に「カメラを準備」を押してください。'); return; }
 
       btnStart.disabled = true;
-      el('productList').disabled = true;
-      el('participantId').disabled = true;
-      el('cameraFacing').disabled = true;
-      btnSetup.disabled = true;
+      el('productList').disabled = true; el('participantId').disabled = true; el('cameraFacing').disabled = true; btnSetup.disabled = true;
 
-      order = shuffle([...Array(products.length).keys()]);
-      currentIndex = -1;
-      renderChips();
-
+      order = shuffle([...Array(products.length).keys()]); currentIndex = -1; renderChips();
       phaseLabel.textContent = '待機中（次を撮影を押してください）';
-      btnNext.disabled = false;
-      updateStartUI();
-    }
+      btnNext.disabled = false; updateStartUI();
+    });
 
-    async function diagnose(){
-      try{
-        const secure = window.isSecureContext;
-        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-          alert('enumerateDevices() が利用できません。');
-          return;
-        }
-        const list = await navigator.mediaDevices.enumerateDevices();
-        const summary = list.map(d => `${d.kind} : ${d.label || '(未許可)'} : ${d.deviceId ? d.deviceId.slice(0,6)+'…' : ''}`).join('\n');
-        alert('SecureContext: ' + secure + '\n' + 'デバイス一覧:\n' + summary + '\n\n※ (未許可) の場合、サイトのカメラ/マイク許可が必要です。');
-      }catch(e){
-        alert('診断に失敗しました: ' + (e && e.message ? e.message : e));
-      }
-    }
-
-    // Wire events
-    btnSetup.addEventListener('click', setupCamera);
-    btnStart.addEventListener('click', runSession);
-    btnDiag.addEventListener('click', diagnose);
-    el('participantId').addEventListener('input', updateStartUI);
-    el('productList').addEventListener('input', updateStartUI);
-    document.addEventListener('DOMContentLoaded', ()=>{ updateStartUI(); applyFlip(); });
-
-    btnNext.addEventListener('click', async ()=>{
-      if(order.length === 0){ return; }
+    btnNext.addEventListener('click', async () => {
+      if (order.length === 0) return;
       const nextIdx = currentIndex + 1;
-      if(nextIdx >= 10){
-        alert('すべての録画が完了しています。');
-        return;
-      }
+      if (nextIdx >= 10) { alert('すべての録画が完了しています。'); return; }
       btnNext.disabled = true;
-      currentIndex = nextIdx;
-      renderChips();
-      const productName = products[ order[currentIndex] ];
+      currentIndex = nextIdx; renderChips();
+      const productName = products[order[currentIndex]];
       await recordOne(productName);
-      if(currentIndex >= 9){
+      if (currentIndex >= 9) {
         phaseLabel.textContent = '完了（全10本）';
         alert('10本の録画が完了しました。クリップ一覧から保存内容をご確認ください。');
-        btnNext.disabled = true;
-        btnStart.disabled = false;
-        el('productList').disabled = false;
-        el('participantId').disabled = false;
-        el('cameraFacing').disabled = false;
-        btnSetup.disabled = false;
-      }else{
+        btnNext.disabled = true; btnStart.disabled = false;
+        el('productList').disabled = false; el('participantId').disabled = false; el('cameraFacing').disabled = false; btnSetup.disabled = false;
+      } else {
         btnNext.disabled = false;
       }
       updateStartUI();
     });
 
-    document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && preview.srcObject) preview.play().catch(()=>{}); });
+    async function updateStartUIInit() { await loadImageFromUrl(ALT_IMAGE_URL); updateStartUI(); applyFlip(); }
+    document.addEventListener('DOMContentLoaded', updateStartUIInit);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && preview.srcObject) preview.play().catch(() => { }); });
+
+    // Diagnose
+    btnDiag.addEventListener('click', async () => {
+      try {
+        const secure = window.isSecureContext;
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) { alert('enumerateDevices() が利用できません。'); return; }
+        const list = await navigator.mediaDevices.enumerateDevices();
+        const summary = list.map(d => `${d.kind} : ${d.label || '(未許可)'} : ${d.deviceId ? d.deviceId.slice(0, 6) + '…' : ''}`).join('\n');
+        alert('SecureContext: ' + secure + '\n' + 'デバイス一覧:\n' + summary + '\n\n※ (未許可) の場合、サイトのカメラ/マイク許可が必要です。');
+      } catch (e) { alert('診断に失敗しました: ' + (e && e.message ? e.message : e)); }
+    });
   </script>
 </body>
+
 </html>
