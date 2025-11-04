@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>映像評価 v2：録画中は常に全画面画像（URL固定）</title>
+  <title>映像評価 v2：途中再開用チェックリスト対応</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -15,211 +14,47 @@
       --err: #ef4444;
       --ink: #e5e7eb;
     }
-
-    html,
-    body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--ink);
+    html, body { height: 100%; background: var(--bg); color: var(--ink);
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", Meiryo, "Apple Color Emoji", "Segoe UI Emoji";
       margin: 0;
     }
-
-    .wrap {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 16px;
+    .wrap { max-width: 900px; margin: 0 auto; padding: 16px; }
+    h1 { font-weight: 700; font-size: clamp(20px, 4vw, 28px); margin: 8px 0 12px }
+    .card { background: var(--panel); border-radius: 18px; padding: 16px; box-shadow: 0 6px 30px rgba(0,0,0,.2); }
+    .grid { display: grid; gap: 12px; grid-template-columns: 1fr !important; }
+    label { font-size: 14px; color: var(--muted) }
+    input, select, button {
+      width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #1f2937; background: #0b1220; color: var(--ink); font-size: 16px
     }
-
-    h1 {
-      font-weight: 700;
-      font-size: clamp(20px, 4vw, 28px);
-      margin: 8px 0 12px
-    }
-
-    .card {
-      background: var(--panel);
-      border-radius: 18px;
-      padding: 16px;
-      box-shadow: 0 6px 30px rgba(0, 0, 0, .2);
-    }
-
-    .grid {
-      display: grid;
-      gap: 12px;
-      grid-template-columns: 1fr !important;
-    }
-
-    label {
-      font-size: 14px;
-      color: var(--muted)
-    }
-
-    input,
-    select,
-    button,
-    textarea {
-      width: 100%;
-      padding: 12px 14px;
-      border-radius: 12px;
-      border: 1px solid #1f2937;
-      background: #0b1220;
-      color: var(--ink);
-      font-size: 16px
-    }
-
-    input::placeholder {
-      color: #64748b
-    }
-
-    button {
-      cursor: pointer;
-      background: #1f2937;
-      border-color: #334155;
-      transition: .15s
-    }
-
-    button.primary {
-      background: linear-gradient(180deg, #22c55e, #16a34a);
-      border: 0;
-      color: white;
-      font-weight: 700
-    }
-
-    button:disabled {
-      opacity: .5;
-      cursor: not-allowed
-    }
-
-    .row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap
-    }
-
-    .muted {
-      color: var(--muted)
-    }
-
-    .ok {
-      color: var(--ok)
-    }
-
-    .warn {
-      color: var(--warn)
-    }
-
-    .err {
-      color: var(--err)
-    }
-
-    video {
-      width: 50%;
-      display: block;
-      margin: 0 auto;
-      background: black;
-      border-radius: 14px;
-      transition: transform .15s ease;
-    }
-
-    .progress {
-      height: 10px;
-      background: #0b1220;
-      border-radius: 999px;
-      overflow: hidden
-    }
-
-    .bar {
-      height: 100%;
-      background: linear-gradient(90deg, #34d399, #22d3ee);
-      width: 0%
-    }
-
-    .chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px
-    }
-
-    .chip {
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: #0b1220;
-      border: 1px solid #334155;
-      color: #cbd5e1;
-      font-size: 12px
-    }
-
-    .table {
-      width: 100%;
-      border-collapse: collapse
-    }
-
-    .table th,
-    .table td {
-      border-bottom: 1px solid #223049;
-      padding: 8px 6px;
-      text-align: left;
-      font-size: 14px
-    }
-
-    .kbd {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      background: #0b1220;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      padding: .2em .45em
-    }
-
-    .hint {
-      font-size: 13px;
-      margin-top: 6px
-    }
-
-    .hint .bad {
-      color: var(--warn)
-    }
-
-    .hint .good {
-      color: var(--ok)
-    }
-
-    /* Fullscreen overlay */
-    .overlay {
-      position: fixed;
-      z-index: 9999;
-      inset: 0;
-      background: black;
-      display: none;
-    }
-
-    .overlay img {
-      position: absolute;
-      inset: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
-
-    .overlay .badge {
-      position: absolute;
-      top: calc(env(safe-area-inset-top, 0) + 8px);
-      left: calc(env(safe-area-inset-left, 0) + 8px);
-      background: rgba(0, 0, 0, 0.5);
-      padding: 6px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      color: #e5e7eb;
-      pointer-events: none;
-    }
+    input::placeholder { color:#64748b }
+    button { cursor: pointer; background:#1f2937; border-color:#334155; transition:.15s }
+    button.primary { background: linear-gradient(180deg, #22c55e, #16a34a); border:0; color:white; font-weight:700 }
+    button:disabled { opacity:.5; cursor:not-allowed }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+    .muted { color: var(--muted) }
+    .ok{color:var(--ok)} .warn{color:var(--warn)} .err{color:var(--err)}
+    video { width: 50%; display:block; margin:0 auto; background:black; border-radius:14px; transition: transform .15s ease; }
+    .progress { height:10px; background:#0b1220; border-radius:999px; overflow:hidden }
+    .bar { height:100%; background: linear-gradient(90deg, #34d399, #22d3ee); width:0% }
+    .chips { display:flex; flex-wrap:wrap; gap:8px }
+    .chip { padding:6px 10px; border-radius:999px; background:#0b1220; border:1px solid #334155; color:#cbd5e1; font-size:12px }
+    .table { width:100%; border-collapse:collapse }
+    .table th, .table td { border-bottom:1px solid #223049; padding:8px 6px; text-align:left; font-size:14px }
+    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:#0b1220; border:1px solid #334155; border-radius:8px; padding:.2em .45em }
+    .hint { font-size:13px; margin-top:6px }
+    .hint .bad { color: var(--warn) } .hint .good{color:var(--ok)}
+    .overlay { position:fixed; z-index:9999; inset:0; background:black; display:none; }
+    .overlay img { position:absolute; inset: env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0); width:100%; height:100%; object-fit: contain; }
+    .overlay .badge { position:absolute; top: calc(env(safe-area-inset-top,0) + 8px); left: calc(env(safe-area-inset-left,0) + 8px); background: rgba(0,0,0,0.5); padding:6px 10px; border-radius:999px; font-size:12px; color:#e5e7eb; pointer-events:none; }
+    .checks { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:8px; margin-top:8px }
+    .check-row { display:flex; align-items:center; gap:8px; background:#0b1220; border:1px solid #223049; border-radius:10px; padding:8px 10px; }
+    .check-row input[type="checkbox"]{ width:auto; }
   </style>
 </head>
-
 <body>
   <div class="wrap">
-    <h1>映像評価 v2：20秒×10本（録画中は常に全画面画像・URL固定）</h1>
-    <p class="muted">録画中は<strong>常に</strong>指定画像を<strong>全画面で表示</strong>します（オフ不可）。画像はHTML内で固定設定されています。</p>
+    <h1>映像評価 v2：20秒×10本（途中再開チェックリスト対応）</h1>
+    <p class="muted">※途中で中断→再開する場合は、<strong>評価済の製品のチェックをOFF</strong>にしてから開始してください。選択中の製品のみランダム順で撮影します。</p>
 
     <div class="grid">
       <div class="card">
@@ -248,34 +83,22 @@
           </div>
         </div>
 
+        <!-- 追加: チェックボックス式の選択UI（編集テキストエリアは廃止） -->
         <div class="grid" style="margin-top:12px;">
           <div>
-            <label>製品名（10種類、必要なら編集）</label>
-            <textarea id="productList" rows="6">製品1
-製品2
-製品3
-製品4
-製品5
-製品6
-製品7
-製品8
-製品9
-製品10</textarea>
-            <div class="muted" style="margin-top:4px">1行につき1製品。ちょうど10行にしてください（ファイル名にも使用）。</div>
-          </div>
-          <div>
-            <label>録画中に表示する画像（固定設定）</label>
-            <div class="hint">この画像はHTML内の <span class="kbd">ALT_IMAGE_URL</span> で指定されています。</div>
-            <div style="display:flex; flex-direction:column; align-items:center; text-align:center; margin-top:10px;">
-              <input id="flipX" type="checkbox">
-              <label for="flipX">プレビューを左右反転（ミラー）表示</label>
+            <label>対象製品（途中再開は評価済みをOFFに）</label>
+            <div class="row" style="margin:6px 0;">
+              <button id="btnSelectAll" type="button">全選択</button>
+              <button id="btnClearAll" type="button">全解除</button>
             </div>
+            <div id="checks" class="checks"></div>
+            <div class="hint">初期状態は<strong>全選択</strong>です。<br>再開時は、これまでに評価済みの製品をOFFにしてからセッション開始してください。</div>
           </div>
         </div>
 
         <div class="row" style="margin-top:12px">
           <button id="btnSetup" class="primary">① カメラを準備（権限付与）</button>
-          <button id="btnStart" disabled title="未準備の項目があります">② 撮影セッション開始</button>
+          <button id="btnStart" disabled title="未準備の項目があります">② 撮影セッション開始（選択製品のみ）</button>
           <button id="btnNext" disabled>次を撮影</button>
           <button id="btnDiag">診断</button>
         </div>
@@ -283,6 +106,12 @@
       </div>
 
       <div class="card">
+        <!-- ミラー表示のチェックをプレビュー直上へ（デフォルトON） -->
+        <div class="row" style="justify-content:center; margin-bottom:6px;">
+          <input id="flipX" type="checkbox" checked>
+          <label for="flipX">プレビューを左右反転（ミラー）表示</label>
+        </div>
+
         <div style="position:relative">
           <video id="preview" playsinline muted></video>
         </div>
@@ -290,8 +119,7 @@
           <div class="progress" style="flex:3">
             <div class="bar" id="progressBar"></div>
           </div>
-          <div style="flex:1;text-align:right"><span id="phaseLabel">準備待ち</span> <span class="muted"
-              id="timeLeft"></span></div>
+          <div style="flex:1;text-align:right"><span id="phaseLabel">準備待ち</span> <span class="muted" id="timeLeft"></span></div>
         </div>
         <div class="chips" style="margin-top:8px" id="chips"></div>
       </div>
@@ -323,7 +151,13 @@
 
   <script>
     // 固定の録画中オーバーレイ画像URL（ユーザーは変更不可）
-    const ALT_IMAGE_URL = "https://yellowtail-project.github.io/testpage/test_background3.png"; // ★ここを差し替えてご利用ください
+    const ALT_IMAGE_URL = "https://yellowtail-project.github.io/testpage/test_background3.png"; // ★必要に応じて差し替えてください
+
+    // 管理者がここで製品名を設定（10個）
+    const PRODUCTS = [
+      "製品1","製品2","製品3","製品4","製品5",
+      "製品6","製品7","製品8","製品9","製品10"
+    ];
 
     // ======== ユーティリティ ========
     const el = (id) => document.getElementById(id);
@@ -342,12 +176,13 @@
     const chips = el('chips');
     const startHints = el('startHints');
 
+    const checksWrap = el('checks');
+    const btnSelectAll = el('btnSelectAll');
+    const btnClearAll = el('btnClearAll');
+
     let stream = null, recorder = null, chunks = [], supportMime = null, loadedImage = false;
     let products = [], order = [], currentIndex = -1;
 
-    function getProductLines() { return el('productList').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean); }
-
-    // Flip
     function applyFlip() { preview.style.transform = flipToggle.checked ? 'scaleX(-1)' : 'none'; }
     flipToggle.addEventListener('change', applyFlip);
 
@@ -363,13 +198,34 @@
       });
     }
 
+    function renderChecks() {
+      checksWrap.innerHTML = '';
+      PRODUCTS.forEach((name, i) => {
+        const row = document.createElement('div');
+        row.className = 'check-row';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.className = 'prodCheck'; cb.checked = true; cb.id = `prod_${i}`;
+        const lab = document.createElement('label');
+        lab.setAttribute('for', cb.id); lab.textContent = `${i + 1}. ${name}`;
+        row.appendChild(cb); row.appendChild(lab);
+        checksWrap.appendChild(row);
+      });
+    }
+
+    function selectedIndices() {
+      return Array.from(checksWrap.querySelectorAll('input[type="checkbox"].prodCheck'))
+        .map((cb, idx) => ({ idx, checked: cb.checked }))
+        .filter(o => o.checked)
+        .map(o => o.idx);
+    }
+
     function unmetReasons() {
       const reasons = [];
       if (!el('participantId').value.trim()) reasons.push('被験者IDが未入力');
       if (!stream) reasons.push('カメラが未準備（「カメラを準備」を押してください）');
-      const lines = getProductLines();
-      if (lines.length !== 10) reasons.push(`製品行数が ${lines.length} 行（10行にしてください）`);
+      if (PRODUCTS.length !== 10) reasons.push(`管理者設定の製品数が ${PRODUCTS.length} 個（10個にしてください）`);
       if (!loadedImage) reasons.push('固定画像の読み込みに失敗（ALT_IMAGE_URL を確認）');
+      if (selectedIndices().length === 0) reasons.push('対象製品が未選択（少なくとも1つ選択してください）');
       return reasons;
     }
 
@@ -377,16 +233,16 @@
       const reasons = unmetReasons();
       const ok = reasons.length === 0;
       btnStart.disabled = !ok;
-      btnStart.title = ok ? '' : ('開始できない理由：\n- ' + reasons.join('\n- '));
+      btnStart.title = ok ? '' : ('開始できない理由：\\n- ' + reasons.join('\\n- '));
       startHints.innerHTML = reasons.length
         ? ('<span class="bad">開始できない理由：</span> ' + reasons.map(r => `<span class="bad">${r}</span>`).join(' / '))
         : '<span class="good">開始可能です。② 撮影セッション開始 を押してください。</span>';
     }
 
     el('participantId').addEventListener('input', updateStartUI);
-    el('productList').addEventListener('input', updateStartUI);
+    checksWrap.addEventListener('change', updateStartUI);
 
-    function shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
+    function shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
     function renderChips() {
       chips.innerHTML = '';
       const list = order.length ? order.map(i => products[i]) : products;
@@ -400,7 +256,7 @@
     }
 
     function pickSupportedMime() {
-      const cands = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm;codecs=h264', 'video/webm', 'video/mp4;codecs=h264', 'video/mp4'];
+      const cands = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm;codecs=h264','video/webm','video/mp4;codecs=h264','video/mp4'];
       for (const m of cands) { if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m; }
       return '';
     }
@@ -415,7 +271,7 @@
         } catch (_) {
           stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         }
-        preview.srcObject = stream; await preview.play().catch(() => { });
+        preview.srcObject = stream; await preview.play().catch(() => {});
         supportMime = pickSupportedMime(); phaseLabel.textContent = '準備OK';
       } catch (err) {
         phaseLabel.textContent = 'カメラ開始に失敗'; alert('カメラ/マイク権限を許可してください。');
@@ -426,12 +282,7 @@
     btnSetup.addEventListener('click', setupCamera);
 
     // Safe filename sanitizer
-    function sanitizeForFilename(s) {
-      return s
-        .replace(/[\x00-\x1F\x7F]/g, '_')                 // control chars
-        .replace(/[\\/:*?"<>|#%&{}$!'@+`=~;,]/g, '_')     // reserved/special
-        .replace(/\s+/g, '_');                              // whitespace to _
-    }
+    function sanitizeForFilename(s) { return s.replace(/[\x00-\x1F\x7F]/g, '_').replace(/[\\/:*?"<>|#%&{}$!'@+`=~;,]/g, '_').replace(/\s+/g, '_'); }
 
     const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -455,6 +306,7 @@
 
       // Always fullscreen mask
       overlay.style.display = 'block';
+      altPreviewFull.src = ALT_IMAGE_URL;
 
       const targetMs = recordSec * 1000;
       const tickInt = setInterval(() => {
@@ -491,13 +343,12 @@
     }
 
     function parseProducts() {
-      const lines = getProductLines();
-      if (lines.length !== 10) { alert(`製品名は10行で入力してください（現在: ${lines.length} 行）`); return null; }
-      return lines;
+      if (!Array.isArray(PRODUCTS)) { alert('PRODUCTS が未定義です'); return null; }
+      if (PRODUCTS.length !== 10) { alert(`管理者設定の製品数は10個である必要があります（現在: ${PRODUCTS.length} 個）`); return null; }
+      return PRODUCTS.slice();
     }
 
-    btnStart.addEventListener('click', async () => {
-      // 固定画像の読み込みを最終確認
+    document.getElementById('btnStart').addEventListener('click', async () => {
       const ok = await loadImageFromUrl(ALT_IMAGE_URL);
       if (!ok) { alert('固定画像URL (ALT_IMAGE_URL) を確認してください。'); return; }
 
@@ -506,36 +357,48 @@
       if (!id) { alert('被験者IDを入力してください'); return; }
       if (!stream) { alert('先に「カメラを準備」を押してください。'); return; }
 
-      btnStart.disabled = true;
-      el('productList').disabled = true; el('participantId').disabled = true; el('cameraFacing').disabled = true; btnSetup.disabled = true;
+      const sel = selectedIndices();
+      if (sel.length === 0) { alert('撮影対象が選択されていません。少なくとも1つ選んでください。'); return; }
 
-      order = shuffle([...Array(products.length).keys()]); currentIndex = -1; renderChips();
+      btnStart.disabled = true;
+      el('participantId').disabled = true; el('cameraFacing').disabled = true; btnSetup.disabled = true;
+      checksWrap.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.disabled = true);
+
+      // 選択された製品のみをランダム順で並べる
+      order = shuffle(sel);
+      currentIndex = -1; renderChips();
       phaseLabel.textContent = '待機中（次を撮影を押してください）';
       btnNext.disabled = false; updateStartUI();
     });
 
-    btnNext.addEventListener('click', async () => {
+    document.getElementById('btnNext').addEventListener('click', async () => {
       if (order.length === 0) return;
       const nextIdx = currentIndex + 1;
-      if (nextIdx >= 10) { alert('すべての録画が完了しています。'); return; }
+      if (nextIdx >= order.length) { alert('選択したすべての録画が完了しています。'); return; }
       btnNext.disabled = true;
       currentIndex = nextIdx; renderChips();
       const productName = products[order[currentIndex]];
       await recordOne(productName);
-      if (currentIndex >= 9) {
-        phaseLabel.textContent = '完了（全10本）';
-        alert('10本の録画が完了しました。クリップ一覧から保存内容をご確認ください。');
+      if (currentIndex >= order.length - 1) {
+        phaseLabel.textContent = `完了（全${order.length}本）`;
+        alert(`${order.length}本の録画が完了しました。クリップ一覧から保存内容をご確認ください。`);
         btnNext.disabled = true; btnStart.disabled = false;
-        el('productList').disabled = false; el('participantId').disabled = false; el('cameraFacing').disabled = false; btnSetup.disabled = false;
+        el('participantId').disabled = false; el('cameraFacing').disabled = false; btnSetup.disabled = false;
+        checksWrap.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.disabled = false);
       } else {
         btnNext.disabled = false;
       }
       updateStartUI();
     });
 
-    async function updateStartUIInit() { await loadImageFromUrl(ALT_IMAGE_URL); updateStartUI(); applyFlip(); }
-    document.addEventListener('DOMContentLoaded', updateStartUIInit);
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && preview.srcObject) preview.play().catch(() => { }); });
+    async function init() {
+      await loadImageFromUrl(ALT_IMAGE_URL);
+      renderChecks();
+      updateStartUI();
+      applyFlip();
+    }
+    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && preview.srcObject) preview.play().catch(() => {}); });
 
     // Diagnose
     btnDiag.addEventListener('click', async () => {
@@ -543,11 +406,10 @@
         const secure = window.isSecureContext;
         if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) { alert('enumerateDevices() が利用できません。'); return; }
         const list = await navigator.mediaDevices.enumerateDevices();
-        const summary = list.map(d => `${d.kind} : ${d.label || '(未許可)'} : ${d.deviceId ? d.deviceId.slice(0, 6) + '…' : ''}`).join('\n');
-        alert('SecureContext: ' + secure + '\n' + 'デバイス一覧:\n' + summary + '\n\n※ (未許可) の場合、サイトのカメラ/マイク許可が必要です。');
+        const summary = list.map(d => `${d.kind} : ${d.label || '(未許可)'} : ${d.deviceId ? d.deviceId.slice(0, 6) + '…' : ''}`).join('\\n');
+        alert('SecureContext: ' + secure + '\\n' + 'デバイス一覧:\\n' + summary + '\\n\\n※ (未許可) の場合、サイトのカメラ/マイク許可が必要です。');
       } catch (e) { alert('診断に失敗しました: ' + (e && e.message ? e.message : e)); }
     });
   </script>
 </body>
-
 </html>
