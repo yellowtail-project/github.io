@@ -459,7 +459,7 @@
       tr.innerHTML = `<td>${seqNum}</td><td>${productName}</td><td>${(durationMs / 1000).toFixed(1)} s</td><td><a download="${filename}" href="${url}">${filename}</a></td>`;
       clipsTableBody.appendChild(tr);
 
-      phaseLabel.textContent = '録画と解析が終了しました'; timeLeft.textContent = ''; updateProgress(0);
+      phaseLabel.textContent = '解析中...'; timeLeft.textContent = ''; updateProgress(0);
     }
 
     btnStart.addEventListener('click', async () => {
@@ -576,7 +576,7 @@
       } = opts;
 
       const phaseLabel = document.getElementById("phaseLabel");
-      const prevPhase = phaseLabel?.textContent;
+
       if (phaseLabel) phaseLabel.textContent = "解析中（表情推定）";
 
       const v = document.createElement("video");
@@ -653,7 +653,8 @@
       downloadBlob(new Blob([csvText], { type: "text/csv;charset=utf-8" }), `${filenameBase}_blendshape.csv`);
 
       URL.revokeObjectURL(v.src);
-      if (phaseLabel) phaseLabel.textContent = prevPhase || "待機中";
+      // 解析完了時の表示を固定
+      if (phaseLabel) phaseLabel.textContent = prevPhase || "録画と解析が終了しました";
     };
   </script>
   <!-- ▲ 解析用依存ここまで ▲ -->
