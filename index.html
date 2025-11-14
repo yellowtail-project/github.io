@@ -528,7 +528,7 @@
     }
 
     // 実効fpsを推定（requestVideoFrameCallback 利用）
-    async function detectVideoFps(video, maxSamples = 30, minDuration = 0.5) {
+    async function detectVideoFps(video, maxSamples = 20, minDuration = 0.5) {
       return new Promise((resolve) => {
         if (!("requestVideoFrameCallback" in HTMLVideoElement.prototype)) {
           // 対応していない場合はフォールバック値
