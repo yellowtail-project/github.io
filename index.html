@@ -572,7 +572,7 @@
     window.processAnalysis = async function processAnalysis(videoBlob, opts = {}) {
       const {
         filenameBase = "analysis",
-        maxAnalyticFps = 12   // 実fpsに対する上限（例: 12fps）
+        maxAnalyticFps = 30   // 実fpsに対する上限（例: 12fps）
       } = opts;
 
       const phaseLabel = document.getElementById("phaseLabel");
