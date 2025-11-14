@@ -449,7 +449,7 @@
         const base = filename.replace(/\.(webm|mp4)$/i, "");
         window.processAnalysis(blob, {
           filenameBase: base,
-          maxAnalyticFps: 12   // 実fpsに応じて自動調整（上限12fps）
+          maxAnalyticFps: 30   // 実fpsに応じて自動調整（上限12fps）
         });
       }
       // ▲ 自動解析ここまで
